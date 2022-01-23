@@ -1,0 +1,43 @@
+[package]
+name = "firmata"
+version = "1.0.0"
+license = "Apache-2.0"
+edition = "2021"
+readme = "README.md"
+repository = "https://github.com/MajorArkwolf/firmata-rust"
+description = "A client-side library for communicating with devices using the firmata protocol."
+keywords = ["arduino", "firmata", "protocol"]
+categories = ["development-tools"]
+
+[[example]]
+name = "analog"
+
+[[example]]
+name = "async"
+
+[[example]]
+name = "blink"
+
+[[example]]
+name = "button"
+
+[[example]]
+name = "servo"
+
+[[example]]
+name = "pwm"
+
+[dependencies]
+thiserror = "1.0"
+serde_json = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+byteorder = "1.4.3"
+tokio = { version = "1", features = ["full"] }
+tokio-util = { version ="0.6.9", features=["codec"] }
+bytes = "1.1.0"
+tokio-stream = "0.1.8"
+futures = "0.3.19"
+
+[dev-dependencies]
+tokio-serial = "5.4.1"
+
