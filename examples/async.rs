@@ -8,12 +8,13 @@ use tokio::net::TcpStream;
 
 #[tokio::main]
 pub async fn main() -> Result<()> {
-    let listener = TcpStream::connect("192.168.128.10:3030").await.unwrap();
-    let mut board = Board::create(listener);
-    let board_state = board.generate_board_state().await?;
+    let mut listener = TcpStream::connect("192.168.128.10:3030").await.unwrap();
+    let (r, w) = listener.split();
+    let mut board = Board::create(r, w);
+    let _board_state = board.generate_board_state().await?;
     let pin = 5;
     board
-        .connection
+        .conn_write
         .send(MessageOut::PinMode(pin, PinMode::Output))
         .await?;
 
@@ -22,7 +23,7 @@ pub async fn main() -> Result<()> {
     loop {
         println!("{}", isOn);
         board
-            .connection
+            .conn_write
             .send(MessageOut::DigitalWrite(pin, isOn))
             .await?;
         isOn = !isOn;

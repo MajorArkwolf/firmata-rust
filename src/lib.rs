@@ -6,6 +6,7 @@ pub mod asynchronous;
 pub mod message;
 mod protocol_constants;
 pub mod standard;
+use asynchronous::board::State;
 use serde::{Deserialize, Serialize};
 use std::iter::Iterator;
 use std::marker::Copy;
@@ -88,6 +89,8 @@ pub enum FirmataError {
     StateError(&'static str),
     #[error("Out of range error `{0}`")]
     OutOfRange(&'static str),
+    #[error("Async Send Error: `{0}`")]
+    AsyncSendError(#[from] tokio::sync::watch::error::SendError<State>),
 }
 
 /// A structure representing an I2C reply.
@@ -146,7 +149,7 @@ impl Pin {
 }
 
 /// A structure representing all available pins on a given board.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct PinStates {
     pub pins: Vec<Pin>,
     pub analog_pin_start: u8,
@@ -175,5 +178,12 @@ impl PinStates {
             self.pins[id].analog = true;
         }
         Ok(())
+    }
+
+    pub fn pin_id_to_u8(&self, pin_id: PinId) -> u8 {
+        match pin_id {
+            PinId::Analog(v) => v + self.analog_pin_start,
+            PinId::Digital(v) | PinId::Pin(v) => v,
+        }
     }
 }
