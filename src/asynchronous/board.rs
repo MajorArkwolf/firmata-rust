@@ -1,15 +1,13 @@
-use std::sync::Arc;
-
 use super::network::FirmataCodec;
 use crate::message::{MessageIn, System};
 use crate::{message, FirmataError, PinMode, PinStates, Result};
 use futures::SinkExt;
 use message::ReportFirmware;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
+use tokio::sync::mpsc;
 use tokio::sync::watch;
-use tokio::sync::{mpsc, Mutex};
 use tokio_stream::StreamExt;
-use tokio_util::codec::{Framed, FramedRead, FramedWrite};
+use tokio_util::codec::{FramedRead, FramedWrite};
 
 pub enum MessageOut {
     AnalogMappingQuery,
@@ -35,6 +33,7 @@ pub struct State {
     protocol_version: String,
 }
 
+#[derive(Debug)]
 pub struct Board<T: AsyncReadExt, U: AsyncWriteExt> {
     pub conn_read: FramedRead<T, FirmataCodec>,
     pub conn_write: FramedWrite<U, FirmataCodec>,
@@ -54,7 +53,7 @@ impl<
         let conn_read = FramedRead::new(conn_read, FirmataCodec::default());
         let conn_write = FramedWrite::new(conn_write, FirmataCodec::default());
         let board_state = State::default();
-        let (state_tx, state_rx) = watch::channel(board_state.clone());
+        let (state_tx, state_rx) = watch::channel(State::default());
         let (message_tx, message_rx) = mpsc::channel::<MessageOut>(50);
         Self {
             conn_read,
@@ -67,7 +66,7 @@ impl<
         }
     }
 
-    pub fn get_message_publisehr(&self) -> mpsc::Sender<MessageOut> {
+    pub fn get_message_publisher(&self) -> mpsc::Sender<MessageOut> {
         self.message_tx.clone()
     }
 
@@ -75,19 +74,24 @@ impl<
         self.state_rx.clone()
     }
 
-    fn handle_message(&mut self, message: MessageIn) -> Result<()> {
+    fn handle_message(&mut self, message: MessageIn) -> Result<State> {
         match message {
             message::MessageIn::Analog(v) => {
                 if !self.board_state.pin_state.pins.is_empty() {
                     let pin: usize = self.board_state.pin_state.pin_id_to_u8(v.pin) as usize;
                     if self.board_state.pin_state.pins[pin].analog {
                         self.board_state.pin_state.pins[pin].value = v.value;
-                        return Ok(());
+                        Ok(())
+                    } else {
+                        Err(FirmataError::UninitializedError(
+                            "analog message arrived but the pins were not initialised",
+                        ))
                     }
+                } else {
+                    Err(FirmataError::UninitializedError(
+                        "analog message arrived but the pins were not initialised",
+                    ))
                 }
-                Err(FirmataError::UninitializedError(
-                    "analog message arrived but the pins were not initialised",
-                ))
             }
             message::MessageIn::Digital(v) => {
                 if !self.board_state.pin_state.pins.is_empty() {
@@ -101,11 +105,12 @@ impl<
                                 (v.value >> (i & 0x07)) & 0x01;
                         }
                     }
-                    return Ok(());
+                    Ok(())
+                } else {
+                    Err(FirmataError::UninitializedError(
+                        "digital message arrived but the pins were not initialised",
+                    ))
                 }
-                Err(FirmataError::UninitializedError(
-                    "digital message arrived but the pins were not initialised",
-                ))
             }
             message::MessageIn::System(v) => match v {
                 message::System::AnalogMappingResponse(v) => {
@@ -113,11 +118,12 @@ impl<
                         for id in v.supported_analog_pins {
                             self.board_state.pin_state.pins[id].analog = true;
                         }
-                        return Ok(());
+                        Ok(())
+                    } else {
+                        Err(FirmataError::UninitializedError(
+                            "pins had not been initialised prior to mapping analog pins",
+                        ))
                     }
-                    Err(FirmataError::UninitializedError(
-                        "pins had not been initialised prior to mapping analog pins",
-                    ))
                 }
                 message::System::CapabilityResponseMessage(v) => {
                     self.board_state.pin_state.pins = v.pins;
@@ -129,7 +135,7 @@ impl<
                     Ok(())
                 }
                 message::System::I2cReplyMessage(_v) => {
-                    //self.board_state.i2c_data.push(v.reply);
+                    //mutex.i2c_data.push(v.reply);
                     Ok(())
                 }
             },
@@ -137,34 +143,33 @@ impl<
                 self.board_state.protocol_version = v;
                 Ok(())
             }
-        }
+        }?;
+        let new_state = self.board_state.clone();
+        Ok(new_state)
     }
 
-    pub async fn poll_recv(&mut self) -> Result<()> {
+    pub async fn poll(&mut self) -> Result<()> {
         loop {
-            let frame = self.conn_read.next().await;
-            let frame = match frame {
-                Some(v) => v?,
-                None => continue,
-            };
-            self.handle_message(frame)?;
-            self.state_tx.send(self.board_state.clone())?;
-        }
-    }
-
-    pub async fn poll_send(&mut self) -> Result<()> {
-        loop {
-            let message = self.message_rx.recv().await.ok_or({
-                FirmataError::NotFoundError("all senders were closed which is unexpected")
-            })?;
-            self.conn_write.send(message).await?
+            tokio::select! {
+                    val = self.conn_read.next() => {
+                        if let Some(v) = val {
+                            let new_state = self.handle_message(v?)?;
+                            self.state_tx.send(new_state)?;
+                        }
+                    }
+                    val = self.message_rx.recv() => {
+                        if let Some(v) = val {
+                            self.conn_write.send(v).await?;
+                        }
+                }
+            }
         }
     }
 
     /// Populates the state of the board, used for quick look ups
     /// # Errors
     /// Can return several firmata errors depeneding on the state that failed.
-    pub async fn generate_board_state(&mut self) -> Result<State> {
+    pub async fn generate_board_state(&mut self) -> Result<()> {
         self.conn_write.feed(MessageOut::ReportFirmware).await?;
         self.conn_write.feed(MessageOut::CapabilityQuery).await?;
         self.conn_write.feed(MessageOut::AnalogMappingQuery).await?;
@@ -207,11 +212,14 @@ impl<
         )?;
         let firmware = firmware.ok_or(FirmataError::WrongType("expected firmware found none"))?;
 
-        Ok(State {
+        let new_state = State {
             pin_state,
             firmware_name: firmware.name,
             firmware_version: firmware.version,
             protocol_version: String::default(),
-        })
+        };
+
+        self.board_state = new_state;
+        Ok(())
     }
 }
