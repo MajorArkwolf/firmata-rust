@@ -1,4 +1,4 @@
-#![warn(clippy::pedantic, clippy::nursery, clippy::cargo)]
+//#![warn(clippy::pedantic, clippy::nursery, clippy::cargo)]
 #![allow(dead_code)]
 //! This module contains a client implementation of the
 //! [Firmata Protocol](https://github.com/firmata/protocol)

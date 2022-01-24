@@ -4,7 +4,7 @@ fn main() {
     let sp = tokio_serial::new("/dev/ttyACM0", 9600).open().unwrap();
 
     let mut b = firmata::standard::board::Board::new(Box::new(sp));
-
+    b.populate_board_info().unwrap();
     let pin = PinId::Digital(3);
 
     println!("firmware version {}", b.firmware_version());

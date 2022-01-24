@@ -42,6 +42,7 @@ pub const SCHEDULER_DATA: u8 = 0x7B;
 pub const SYSEX_NON_REALTIME: u8 = 0x7E;
 pub const SYSEX_REALTIME: u8 = 0x7F;
 pub const PIN_MODE: u8 = 0xF4;
+pub const DIGITAL_PIN_WRITE: u8 = 0xF5;
 pub const REPORT_DIGITAL: u8 = 0xD0;
 pub const REPORT_ANALOG: u8 = 0xC0;
 

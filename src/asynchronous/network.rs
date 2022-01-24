@@ -1,8 +1,8 @@
 use crate::protocol_constants::{
     is_id, ANALOG_MAPPING_QUERY, ANALOG_MESSAGE, ANALOG_MESSAGE_END, CAPABILITY_QUERY,
-    DIGITAL_MESSAGE, DIGITAL_MESSAGE_END, END_SYSEX, I2C_CONFIG, I2C_MODE_READ, I2C_MODE_WRITE,
-    I2C_REQUEST, PIN_MODE, PROTOCOL_VERSION, REPORT_ANALOG, REPORT_DIGITAL, REPORT_FIRMWARE,
-    SAMPLEING_INTERVAL, START_SYSEX, STRING_DATA,
+    DIGITAL_MESSAGE, DIGITAL_MESSAGE_END, DIGITAL_PIN_WRITE, END_SYSEX, I2C_CONFIG, I2C_MODE_READ,
+    I2C_MODE_WRITE, I2C_REQUEST, PIN_MODE, PROTOCOL_VERSION, REPORT_ANALOG, REPORT_DIGITAL,
+    REPORT_FIRMWARE, SAMPLEING_INTERVAL, START_SYSEX, STRING_DATA,
 };
 
 use super::board::MessageOut;
@@ -79,9 +79,8 @@ impl Encoder<MessageOut> for FirmataCodec {
                 let bytes_out = output.to_le_bytes();
                 dst.extend_from_slice(&[ANALOG_MESSAGE | pin, bytes_out[0], bytes_out[1]]);
             }
-            MessageOut::DigitalMessage(port, output) => {
-                let bytes_out = output.to_le_bytes();
-                dst.extend_from_slice(&[DIGITAL_MESSAGE | port as u8, bytes_out[0], bytes_out[1]]);
+            MessageOut::DigitalWrite(port, output) => {
+                dst.extend_from_slice(&[DIGITAL_PIN_WRITE, port, output as u8]);
             }
             MessageOut::StringWrite(string_out) => {
                 let mut buf: Vec<u8> = vec![START_SYSEX, STRING_DATA];
@@ -92,7 +91,7 @@ impl Encoder<MessageOut> for FirmataCodec {
                 buf.push(END_SYSEX);
                 dst.extend_from_slice(buf.as_slice());
             }
-            MessageOut::PinMode(pin, mode) => dst.extend_from_slice(&[PIN_MODE, pin, mode as u8]),
+            MessageOut::PinMode(pin, mode) => dst.extend_from_slice(&[PIN_MODE, pin, mode.to_u8()]),
             MessageOut::SampleingInterval(duration) => {
                 let dur_in_ms: u16 = duration.as_millis() as u16;
                 let bytes = dur_in_ms.to_le_bytes();
@@ -138,7 +137,7 @@ impl Decoder for FirmataCodec {
                     || src[v] == PROTOCOL_VERSION
                 {
                     if src.len() > (v + 2) {
-                        Some(remove_section(src, v, v + 2 + 1))
+                        Some(remove_section(src, v, v + 2))
                     } else {
                         // this should grow because we are missing two bytes
                         None

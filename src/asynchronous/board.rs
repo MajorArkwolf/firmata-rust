@@ -18,7 +18,7 @@ pub enum MessageOut {
     ReportDigital(u8, bool),
     ReportAnalog(u8, bool),
     AnalogWrite(u8, u16),
-    DigitalMessage(u8, u16),
+    DigitalWrite(u8, bool),
     StringWrite(String),
     PinMode(u8, PinMode),
     SampleingInterval(std::time::Duration),

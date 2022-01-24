@@ -291,7 +291,7 @@ impl<T: io::Read + io::Write> Board<T> {
             }
             i += 1;
         }
-        let bytes_out = output.to_le_bytes();
+        let bytes_out = value.to_le_bytes();
         self.connection
             .write_all(&[DIGITAL_MESSAGE | port as u8, bytes_out[0], bytes_out[1]])?;
         Ok(())
