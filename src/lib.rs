@@ -6,7 +6,7 @@ pub mod asynchronous;
 pub mod message;
 mod protocol_constants;
 pub mod standard;
-use asynchronous::board::State;
+use asynchronous::board::{MessageOut, State};
 use serde::{Deserialize, Serialize};
 use std::iter::Iterator;
 use std::marker::Copy;
@@ -89,8 +89,10 @@ pub enum FirmataError {
     StateError(&'static str),
     #[error("Out of range error `{0}`")]
     OutOfRange(&'static str),
-    #[error("Async Send Error: `{0}`")]
-    AsyncSendError(#[from] tokio::sync::watch::error::SendError<State>),
+    #[error("Async State Send Error: `{0}`")]
+    AsyncStateSendError(#[from] tokio::sync::watch::error::SendError<State>),
+    #[error("Async MessageOut Send Error: `{0}`")]
+    AsyncMessageOutSendError(#[from] tokio::sync::mpsc::error::SendError<MessageOut>),
 }
 
 /// A structure representing an I2C reply.

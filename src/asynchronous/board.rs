@@ -9,6 +9,7 @@ use tokio::sync::watch;
 use tokio_stream::StreamExt;
 use tokio_util::codec::{FramedRead, FramedWrite};
 
+#[derive(Debug, Clone)]
 pub enum MessageOut {
     AnalogMappingQuery,
     CapabilityQuery,
@@ -35,8 +36,8 @@ pub struct State {
 
 #[derive(Debug)]
 pub struct Board<T: AsyncReadExt, U: AsyncWriteExt> {
-    pub conn_read: FramedRead<T, FirmataCodec>,
-    pub conn_write: FramedWrite<U, FirmataCodec>,
+    conn_read: FramedRead<T, FirmataCodec>,
+    conn_write: FramedWrite<U, FirmataCodec>,
     board_state: State,
     state_tx: watch::Sender<State>,
     state_rx: watch::Receiver<State>,

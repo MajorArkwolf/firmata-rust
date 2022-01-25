@@ -14,27 +14,25 @@ pub async fn main() -> Result<()> {
         .into_split();
     let mut board = Board::create(r, w);
     let _board_state = board.generate_board_state().await?;
-    let pin = 5;
-    board
-        .conn_write
-        .send(MessageOut::PinMode(pin, PinMode::Output))
-        .await?;
-    let mut isOn = true;
 
     let publisher = board.get_message_publisher();
 
-    let _x = tokio::task::spawn(async move {
-        board.poll().await;
-    });
+    let _x = tokio::task::spawn(async move { board.poll().await });
 
+    let pin = 5;
+    publisher
+        .send(MessageOut::PinMode(pin, PinMode::Output))
+        .await?;
+
+    let mut is_on = true;
     loop {
-        println!("{}", isOn);
-        let x = publisher.send(MessageOut::DigitalWrite(pin, isOn)).await;
+        println!("{}", is_on);
+        let x = publisher.send(MessageOut::DigitalWrite(pin, is_on)).await;
         match x {
             Ok(_) => {}
             Err(_) => break,
         }
-        isOn = !isOn;
+        is_on = !is_on;
         tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
     Ok(())
