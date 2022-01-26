@@ -1,3 +1,4 @@
+use super::comm::BoardCommunicator;
 use super::network::FirmataCodec;
 use crate::message::{MessageIn, System};
 use crate::{message, FirmataError, PinMode, PinStates, Result};
@@ -28,10 +29,10 @@ pub enum MessageOut {
 
 #[derive(Debug, Clone, Default)]
 pub struct State {
-    pin_state: PinStates,
-    firmware_name: String,
-    firmware_version: String,
-    protocol_version: String,
+    pub pin_state: PinStates,
+    pub firmware_name: String,
+    pub firmware_version: String,
+    pub protocol_version: String,
 }
 
 #[derive(Debug)]
@@ -67,12 +68,32 @@ impl<
         }
     }
 
-    pub fn get_message_publisher(&self) -> mpsc::Sender<MessageOut> {
-        self.message_tx.clone()
+    pub fn get_board_communicator(&self) -> BoardCommunicator {
+        BoardCommunicator::create(self.state_rx.clone(), self.message_tx.clone())
     }
 
-    pub fn get_state_subscriber(&self) -> watch::Receiver<State> {
-        self.state_rx.clone()
+    fn update_local(&mut self, message: &MessageOut) {
+        match message {
+            MessageOut::AnalogWrite(pin, value) => {
+                let index: usize = *pin as usize;
+                if self.board_state.pin_state.pins.len() > index {
+                    self.board_state.pin_state.pins[index].value = *value;
+                }
+            }
+            MessageOut::DigitalWrite(pin, value) => {
+                let index: usize = *pin as usize;
+                if self.board_state.pin_state.pins.len() > index {
+                    self.board_state.pin_state.pins[index].value = *value as u16;
+                }
+            }
+            MessageOut::PinMode(pin, mode) => {
+                let index: usize = *pin as usize;
+                if self.board_state.pin_state.pins.len() > index {
+                    self.board_state.pin_state.pins[index].mode = *mode;
+                }
+            }
+            _ => {}
+        }
     }
 
     fn handle_message(&mut self, message: MessageIn) -> Result<State> {
@@ -160,6 +181,7 @@ impl<
                     }
                     val = self.message_rx.recv() => {
                         if let Some(v) = val {
+                            self.update_local(&v);
                             self.conn_write.send(v).await?;
                         }
                 }
