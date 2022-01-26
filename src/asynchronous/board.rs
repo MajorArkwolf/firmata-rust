@@ -1,6 +1,6 @@
 use super::boardio::MessageOut::*;
 use super::boardio::{MessageOut, State};
-use crate::{Pin, PinId, PinMode, Result};
+use crate::{FirmataError, Pin, PinId, PinMode, Result};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
 
@@ -30,6 +30,18 @@ impl Board {
 
     pub fn pins(&self) -> Vec<Pin> {
         self.get_state().pin_state.pins
+    }
+
+    pub fn get_pin_value(&self, pin: PinId) -> Result<u16> {
+        let pins = self.pins();
+        let pin_id = self.convert_pin_id_to_u8(pin) as usize;
+        if pins.len() > pin_id {
+            Ok(pins[pin_id].value)
+        } else {
+            Err(FirmataError::OutOfRange(
+                "tried to address pin a pin that exceeded the max pin index",
+            ))
+        }
     }
 
     pub fn protocol_version(&self) -> String {
