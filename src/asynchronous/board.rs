@@ -1,11 +1,8 @@
 use super::boardio::MessageOut::*;
 use super::boardio::{MessageOut, State};
-use crate::{message, FirmataError, Pin, PinId, PinMode, Result};
-use futures::SinkExt;
-use message::ReportFirmware;
+use crate::{Pin, PinId, PinMode, Result};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
-use tokio_stream::StreamExt;
 
 pub struct Board {
     state: watch::Receiver<State>,

@@ -4,6 +4,7 @@ use crate::message::{MessageIn, System};
 use crate::{message, FirmataError, PinMode, PinStates, Result};
 use futures::SinkExt;
 use message::ReportFirmware;
+use std::marker::{Send, Unpin};
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
@@ -46,11 +47,7 @@ pub struct BoardIo<T: AsyncReadExt, U: AsyncWriteExt> {
     message_rx: mpsc::Receiver<MessageOut>,
 }
 
-impl<
-        T: AsyncReadExt + std::marker::Unpin + std::marker::Send,
-        U: AsyncWriteExt + std::marker::Unpin + std::marker::Send,
-    > BoardIo<T, U>
-{
+impl<T: AsyncReadExt + Unpin + Send, U: AsyncWriteExt + Unpin + Send> BoardIo<T, U> {
     pub fn create(conn_read: T, conn_write: U) -> Self {
         let conn_read = FramedRead::new(conn_read, FirmataCodec::default());
         let conn_write = FramedWrite::new(conn_write, FirmataCodec::default());

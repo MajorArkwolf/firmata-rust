@@ -22,11 +22,14 @@ pub async fn main() -> Result<()> {
     // Job running in parrallel as a task
     let _y = tokio::task::spawn(async move {
         let pin = PinId::Digital(5);
-        board_communicator2.set_pin_mode(pin, PinMode::Output).await;
+        board_communicator2
+            .set_pin_mode(pin, PinMode::Output)
+            .await
+            .unwrap();
         let mut is_on = true;
         loop {
             println!("{}", is_on);
-            board_communicator2.digital_write(pin, is_on).await;
+            board_communicator2.digital_write(pin, is_on).await.unwrap();
             is_on = !is_on;
             tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
