@@ -1,9 +1,7 @@
 extern crate firmata;
-use std::process::Output;
 
-use firmata::asynchronous::board::{Board, MessageOut};
+use firmata::asynchronous::board::Board;
 use firmata::{PinId, PinMode, Result};
-use futures::{SinkExt, TryFutureExt};
 use tokio::net::TcpStream;
 
 #[tokio::main]
@@ -13,27 +11,37 @@ pub async fn main() -> Result<()> {
         .unwrap()
         .into_split();
     let mut board = Board::create(r, w);
-    let _board_state = board.generate_board_state().await?;
+    board.generate_board_state().await?;
 
-    let publisher = board.get_message_publisher();
+    let mut board_communicator = board.get_board_communicator();
+    let mut board_communicator2 = board.get_board_communicator();
 
+    // Backend IO
     let _x = tokio::task::spawn(async move { board.poll().await });
 
-    let pin = 5;
-    publisher
-        .send(MessageOut::PinMode(pin, PinMode::Output))
+    // Job running in parrallel as a task
+    let _y = tokio::task::spawn(async move {
+        let pin = PinId::Digital(5);
+        board_communicator2.set_pin_mode(pin, PinMode::Output).await;
+        let mut is_on = true;
+        loop {
+            println!("{}", is_on);
+            board_communicator2.digital_write(pin, is_on).await;
+            is_on = !is_on;
+        }
+    });
+
+    // Main task
+    let pin = PinId::Digital(6);
+    board_communicator
+        .set_pin_mode(pin, PinMode::Output)
         .await?;
 
     let mut is_on = true;
     loop {
         println!("{}", is_on);
-        let x = publisher.send(MessageOut::DigitalWrite(pin, is_on)).await;
-        match x {
-            Ok(_) => {}
-            Err(_) => break,
-        }
+        board_communicator.digital_write(pin, is_on).await?;
         is_on = !is_on;
-        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
     }
     Ok(())
 }

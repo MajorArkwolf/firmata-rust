@@ -101,9 +101,7 @@ impl BoardCommunicator {
 
     pub async fn digital_write(&mut self, pin: PinId, output: bool) -> Result<()> {
         let pin_out = self.convert_pin_id_to_u8(pin);
-        let port = (pin_out as f64 / 8_f64).floor() as usize;
-
-        self.tx.send(DigitalWrite(port as u8, output)).await?;
+        self.tx.send(DigitalWrite(pin_out, output)).await?;
         Ok(())
     }
 
