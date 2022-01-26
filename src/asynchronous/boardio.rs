@@ -93,7 +93,7 @@ impl<T: AsyncReadExt + Unpin + Send, U: AsyncWriteExt + Unpin + Send> BoardIo<T,
         }
     }
 
-    fn handle_message(&mut self, message: MessageIn) -> Result<State> {
+    fn handle_message(&mut self, message: MessageIn) -> Result<()> {
         match message {
             message::MessageIn::Analog(v) => {
                 if !self.board_state.pin_state.pins.is_empty() {
@@ -162,9 +162,7 @@ impl<T: AsyncReadExt + Unpin + Send, U: AsyncWriteExt + Unpin + Send> BoardIo<T,
                 self.board_state.protocol_version = v;
                 Ok(())
             }
-        }?;
-        let new_state = self.board_state.clone();
-        Ok(new_state)
+        }
     }
 
     pub async fn poll(&mut self) -> Result<()> {
@@ -172,14 +170,15 @@ impl<T: AsyncReadExt + Unpin + Send, U: AsyncWriteExt + Unpin + Send> BoardIo<T,
             tokio::select! {
                     val = self.conn_read.next() => {
                         if let Some(v) = val {
-                            let new_state = self.handle_message(v?)?;
-                            self.state_tx.send(new_state)?;
+                            self.handle_message(v?)?;
+                            self.state_tx.send(self.board_state.clone())?;
                         }
                     }
                     val = self.message_rx.recv() => {
                         if let Some(v) = val {
                             self.update_local(&v);
                             self.conn_write.send(v).await?;
+                            self.state_tx.send(self.board_state.clone())?
                         }
                 }
             }
@@ -240,6 +239,7 @@ impl<T: AsyncReadExt + Unpin + Send, U: AsyncWriteExt + Unpin + Send> BoardIo<T,
         };
 
         self.board_state = new_state;
+        self.state_tx.send(self.board_state.clone())?;
         Ok(())
     }
 }

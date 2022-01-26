@@ -179,6 +179,13 @@ impl PinStates {
         for id in analog_pins {
             self.pins[id].analog = true;
         }
+        self.analog_pin_start = self
+            .pins
+            .iter()
+            .enumerate()
+            .find_map(|v| if v.1.analog { Some(v.0) } else { None })
+            .map_or(0, |v| v) as u8;
+
         Ok(())
     }
 
