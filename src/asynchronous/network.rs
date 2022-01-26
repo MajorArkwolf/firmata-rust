@@ -5,7 +5,7 @@ use crate::protocol_constants::{
     REPORT_FIRMWARE, SAMPLEING_INTERVAL, START_SYSEX, STRING_DATA,
 };
 
-use super::board::MessageOut;
+use super::boardio::MessageOut;
 use super::parser::parse_data;
 use crate::message::MessageIn;
 use crate::{FirmataError, Result};

@@ -1,6 +1,6 @@
 extern crate firmata;
 
-use firmata::asynchronous::board::Board;
+use firmata::asynchronous::boardio::BoardIo;
 use firmata::{PinId, PinMode, Result};
 use tokio::net::TcpStream;
 
@@ -10,7 +10,7 @@ pub async fn main() -> Result<()> {
         .await
         .unwrap()
         .into_split();
-    let mut board = Board::create(r, w);
+    let mut board = BoardIo::create(r, w);
     board.generate_board_state().await?;
 
     let mut board_communicator = board.get_board_communicator();
@@ -28,6 +28,7 @@ pub async fn main() -> Result<()> {
             println!("{}", is_on);
             board_communicator2.digital_write(pin, is_on).await;
             is_on = !is_on;
+            tokio::time::sleep(std::time::Duration::from_millis(50)).await;
         }
     });
 
@@ -42,6 +43,7 @@ pub async fn main() -> Result<()> {
         println!("{}", is_on);
         board_communicator.digital_write(pin, is_on).await?;
         is_on = !is_on;
+        tokio::time::sleep(std::time::Duration::from_millis(150)).await;
     }
     Ok(())
 }

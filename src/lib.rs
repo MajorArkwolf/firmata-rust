@@ -6,7 +6,7 @@ pub mod asynchronous;
 pub mod message;
 mod protocol_constants;
 pub mod standard;
-use asynchronous::board::{MessageOut, State};
+use asynchronous::boardio::{MessageOut, State};
 use serde::{Deserialize, Serialize};
 use std::iter::Iterator;
 use std::marker::Copy;

@@ -1,4 +1,4 @@
 pub mod board;
-pub mod comm;
+pub mod boardio;
 pub mod network;
 mod parser;
