@@ -4,6 +4,7 @@ use crate::{Pin, PinId, PinMode, Result};
 use tokio::sync::mpsc;
 use tokio::sync::watch;
 
+#[derive(Debug, Clone)]
 pub struct Board {
     state: watch::Receiver<State>,
     tx: mpsc::Sender<MessageOut>,
