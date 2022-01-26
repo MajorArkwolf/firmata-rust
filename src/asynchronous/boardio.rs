@@ -65,7 +65,7 @@ impl<T: AsyncReadExt + Unpin + Send, U: AsyncWriteExt + Unpin + Send> BoardIo<T,
         }
     }
 
-    pub fn get_board_communicator(&self) -> Board {
+    pub fn get_board(&self) -> Board {
         Board::create(self.state_rx.clone(), self.message_tx.clone())
     }
 

@@ -13,8 +13,8 @@ pub async fn main() -> Result<()> {
     let mut board = BoardIo::create(r, w);
     board.generate_board_state().await?;
 
-    let mut board_communicator = board.get_board_communicator();
-    let mut board_communicator2 = board.get_board_communicator();
+    let mut board_communicator = board.get_board();
+    let mut board_communicator2 = board.get_board();
 
     // Backend IO
     let _x = tokio::task::spawn(async move { board.poll().await });
