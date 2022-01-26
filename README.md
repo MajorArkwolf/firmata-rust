@@ -26,6 +26,6 @@ Implemented
 - Servo
 - String write
 - Sampling Interval
-- I2C
+- I2C - Not implemented on async board
 - Pwm 
 
