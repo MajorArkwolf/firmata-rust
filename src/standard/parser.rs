@@ -4,7 +4,7 @@ use crate::protocol_constants::{
     ANALOG_MAPPING_RESPONSE, CAPABILITY_RESPONSE, END_SYSEX, I2C_MODE_READ, REPORT_FIRMWARE,
 };
 use crate::{message, FirmataError, PinId, Result};
-use byteorder::{BigEndian, ByteOrder};
+use byteorder::{ByteOrder, LittleEndian};
 use message::{Analog, Digital, Message, MessageId, MessageIn};
 
 pub fn read_and_parse<T: std::io::Read>(
@@ -39,7 +39,7 @@ pub fn read_and_parse<T: std::io::Read>(
 pub fn read_and_parse_analog<T: std::io::Read>(reader: &mut T, first_byte: u8) -> Result<Message> {
     let buf: &mut [u8; 2] = &mut [0; 2];
     reader.read_exact(buf)?;
-    let value: u16 = BigEndian::read_u16(buf);
+    let value: u16 = LittleEndian::read_u16(buf);
     // Analog message can only do a range between 0..15, if you need to address
     // greater then 15 you need to use ANALOG_EXTENDED.
     let pin = first_byte & 0x0F;
@@ -59,7 +59,7 @@ pub fn read_and_parse_digital<T: std::io::Read>(reader: &mut T, first_byte: u8) 
     let buf: &mut [u8; 2] = &mut [0; 2];
     reader.read_exact(buf)?;
     let port = first_byte & 0x0F;
-    let value: u16 = BigEndian::read_u16(buf);
+    let value: u16 = LittleEndian::read_u16(buf);
     let digital_message = Digital { port, value };
     Ok(Message {
         message_id: MessageId::Digital,

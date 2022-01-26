@@ -1,4 +1,4 @@
-use byteorder::{BigEndian, ByteOrder};
+use byteorder::{ByteOrder, LittleEndian};
 use bytes::BytesMut;
 
 use crate::message::{
@@ -44,7 +44,7 @@ pub fn parse_data(buf: &mut BytesMut) -> Result<MessageIn> {
             &buf[1..buf.len() - 1],
         )?)),
         Header::AnalogMessage => {
-            let value: u16 = BigEndian::read_u16(&buf[1..3]);
+            let value: u16 = LittleEndian::read_u16(&buf[1..3]);
             // Analog message can only do a range between 0..15, if you need to address
             // greater then 15 you need to use ANALOG_EXTENDED.
             let pin = buf[0] & 0x0F;
@@ -56,7 +56,7 @@ pub fn parse_data(buf: &mut BytesMut) -> Result<MessageIn> {
         }
         Header::DigitalMessage => {
             let port = buf[0] & 0x0F;
-            let value: u16 = BigEndian::read_u16(&buf[1..3]);
+            let value: u16 = LittleEndian::read_u16(&buf[1..3]);
             let digital_message = Digital { port, value };
             Ok(MessageIn::Digital(digital_message))
         }
